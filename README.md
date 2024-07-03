@@ -2,7 +2,7 @@ Based on: https://industry40.systems/8
 
 # Remote Access Gateway
 
-Primero instalamos lo necesario
+Instalar dependencias
 
 ```
 sudo apt-get update -y
@@ -12,7 +12,7 @@ sudo apt-get install curl -y
 
 ```
 
-INstalamos zerotier
+Instalar zerotier
 
 ```
 sudo su
@@ -20,21 +20,21 @@ sudo curl -s https://install.zerotier.com | sudo bash
 
 ```
 
-Nos conectamos al network de zerotier
+Conectar el host al network de zerotier
 
 ```
-zerotier-cli join 0cccb752f7ffd0ce
+zerotier-cli join (id de la red)
 ```
 
 Desde el zerotier se tiene que aceptar y marcar los dos checkboxes de configuración de bridging y auto assign IP
 
-Tambien se tiene que acceder al archivo `/var/lib/zerotier-one/network.d/0cccb752f7ffd0ce.local.conf `
+Por defecto, luego de que el host logre conectarse a la VPN, Zerotier creará dos archivos de configuración en la ruta `/var/lib/zerotier-one/network.d` Tambien se tiene que acceder al archivo `/var/lib/zerotier-one/network.d/(id autogenerado por zerotier).local.conf`
 
 ```
-nano /var/lib/zerotier-one/networks.d/0cccb752f7ffd0ce.local.conf
+nano /var/lib/zerotier-one/networks.d/(id autogenerado por zerotier).local.conf
 ```
 
-y colocar el contenido
+y modificar el contenido a 0 (desactivar todas las opciones)
 
 ```
 allowManaged=0
@@ -42,8 +42,8 @@ allowGlobal=0
 allowDefault=0
 allowDNS=0
 ```
-
-Luego crear el archivo `/etc/netplan/50-cloud-init.yaml` con el siguiente contenido (La IP es la que asigna el zerotier)
+Primera configuración del bridge. Para este paso es necesario determinar el nombre de la interfaz ethernet (apoyarse de `ip a` o `ifconfig`), el prefijo de la red que se tiene en zerotier además de la IP que le asignó a la interfaz de zerotier.
+Crear el archivo `/etc/netplan/50-cloud-init.yaml` con el siguiente contenido (leer comentarios en el código para mayor información)
 
 ```yaml
 # This file is generated from information provided by
@@ -54,51 +54,54 @@ Luego crear el archivo `/etc/netplan/50-cloud-init.yaml` con el siguiente conten
 network:
   version: 2
   ethernets:
-    eth0:
+    (ethernet interface):
       addresses: []
       dhcp4: false
       optional: true
   bridges:
     br0:
-      addresses: [192.168.192.XX/24]
+      # Colocar aquí la ip asignada a la interfaz seguida de la máscara de red Ej. 192.168.192.5/24
+      addresses: [(ip address)]
       dhcp4: false
       interfaces:
-        - eth0
-      gateway4: 192.168.192.1
+        - (ethernet interface)
+      # Colocar aquí la IP del gateway de la red Ej. 192.168.192.1
+      gateway4: (ip gateway)
       nameservers:
         addresses: [8.8.8.8]
 ```
 
-Aca es importante verificar que la interfaz eth0 sea correcta y asi se llame cuando ejecutamos `ifconfig`
-
-Luego ejecutamos
+Para proceder a la creación del bridge, ejecutar:
 
 ```
 sudo netplan apply
 ```
 
-Luego de aplicar el netplan, no se podrá acceder por ethernet con la IP conocide,a mejor acceeder por la IP que asigna el zerotier
-
-Luego creamos la carpeta y archivo
+Luego de aplicar el netplan, la IP de la interfaz ethernet se modificará por lo tanto se debe acceeder a través de la IP que asignó zerotier
+Es necesario crear un script para continuar con la configuración del bridge en la ruta `/opt/network`
 
 ```
 sudo mkdir /opt/network
 sudo nano /opt/network/bridge.sh
 ```
 
-Y colocamos el siguiente contenido
+Es necesario nuevamente, el nombre asignado a la interfaz ethernet, el nombre de la interfaz creada por zerotier y el nombre de una interfaz con acceso a internet para permitir la conexión con los servidores de zerotier. Los dispositivos owasys, luego de haberse configurado la conexión celular, cuentan con una interfaz llamada ppp0 que es la que se utiliza en el script.
 
 ```bash
 #!/bin/bash
 PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 export PATH
 
-LOCAL_IF="eth0"
-VPN_IF="ztly5urarz"
-INTER_IF="ppp0"
+LOCAL_IF="(ethernet interface)"
+# No confundir con el nombre de la red en el panel de zerotier
+VPN_IF="(zerotier interface)"
+# Interfaz cin acceso a internet Ej. ppp0
+INTER_IF="(nat interface)"
 
-BR_IP="192.168.192.XX/24"
-BR_NET="192.168.192.0/24"
+# IP anteriormente asignada por zerotier al host, la misma que se configuró en un inicio en el bridge Ej. 192.168.192.5/24
+BR_IP="(ip address)"
+# IP de la red de zerotier seguida del prefijo Ej. 192.168.192.0/24
+BR_NET="(ip address)"
 
 date
 
@@ -150,14 +153,14 @@ iptables -I FORWARD -o $LOCAL_IF -j ACCEPT
 
 ```
 
-Por último reiniciamos y ejecutamos el script
+Por último reiniciar el sistema y ejecutar el script
 
 ```bash
 sudo reboot
 sudo bash /opt/network/bridge.sh
 ```
 
-Por último verificamos que aparezca el bridge con
+Por último se verifica que aparezca el bridge con
 
 ```
 sudo brctl show
@@ -190,7 +193,7 @@ ExecStart=/bin/bash /opt/network/bridge.sh
 [Install]
 WantedBy=default.target
 ```
-
+Es necesario activar e iniciar el servicio
 ```
 sudo systemctl enable bridge-start.service
 sudo systemctl start bridge-start.service
