@@ -1,2 +1,4 @@
 .env
-*.sh
+.sh
+# installation_scripts folder
+installation_scripts/
