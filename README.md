@@ -15,8 +15,7 @@ sudo apt-get install curl -y
 Instalar zerotier
 
 ```
-sudo su
-sudo curl -s https://install.zerotier.com | sudo bash
+curl -k https://install.zerotier.com | sudo bash
 
 ```
 
@@ -42,6 +41,7 @@ allowGlobal=0
 allowDefault=0
 allowDNS=0
 ```
+
 Primera configuración del bridge. Para este paso es necesario determinar el nombre de la interfaz ethernet (apoyarse de `ip a` o `ifconfig`), el prefijo de la red que se tiene en zerotier además de la IP que le asignó a la interfaz de zerotier.
 Crear el archivo `/etc/netplan/50-cloud-init.yaml` con el siguiente contenido (leer comentarios en el código para mayor información)
 
@@ -193,7 +193,9 @@ ExecStart=/bin/bash /opt/network/bridge.sh
 [Install]
 WantedBy=default.target
 ```
+
 Es necesario activar e iniciar el servicio
+
 ```
 sudo systemctl enable bridge-start.service
 sudo systemctl start bridge-start.service
