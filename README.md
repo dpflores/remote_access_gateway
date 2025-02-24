@@ -22,12 +22,12 @@ curl -k https://install.zerotier.com | sudo bash
 Conectar el host al network de zerotier
 
 ```
-zerotier-cli join (id de la red)
+sudo zerotier-cli join (id de la red)
 ```
 
 Desde el zerotier se tiene que aceptar y marcar los dos checkboxes de configuración de bridging y auto assign IP
 
-Por defecto, luego de que el host logre conectarse a la VPN, Zerotier creará dos archivos de configuración en la ruta `/var/lib/zerotier-one/network.d` Tambien se tiene que acceder al archivo `/var/lib/zerotier-one/network.d/(id autogenerado por zerotier).local.conf`
+Por defecto, luego de que el host logre conectarse a la VPN, Zerotier creará dos archivos de configuración en la ruta `/var/lib/zerotier-one/networks.d` Tambien se tiene que acceder al archivo `/var/lib/zerotier-one/network.d/(id autogenerado por zerotier).local.conf`
 
 ```
 nano /var/lib/zerotier-one/networks.d/(id autogenerado por zerotier).local.conf
@@ -60,7 +60,7 @@ network:
       optional: true
   bridges:
     br0:
-      # Colocar aquí la ip asignada a la interfaz seguida de la máscara de red Ej. 192.168.192.5/24
+      # Colocar aquí la ip asignada a la interfaz de zerotier seguida de la máscara de red Ej. 192.168.192.5/24
       addresses: [(ip address)]
       dhcp4: false
       interfaces:
